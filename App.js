@@ -155,8 +155,8 @@ const getLoc = async () => {
     // setStartTime(d[0].timestamp);
     const a = (d[d.length - 1].speed - d[d.length - 2].speed) / ((d[d.length - 1].timestamp - d[d.length-2].timestamp) / 1000 + 0.001);
     setAccel(a);
-    Math.abs(a) > 6.5 && loc.speed > 5 ? setScore(score - 10) : null;
-    loc.speed > speedLim ? setScore(score-5) : null;
+    Math.abs(a) > 6.5 && loc.speed > 15 ? setScore(score - 10) : null;
+    loc.speed > speedLim && speedLim > 15 ? setScore(score-5) : null;
     // console.log(d.map(x => x.timestamp));
     // console.log(d.length);
     if (!speedLim) getSpeedLimit(loc.latitude, loc.longitude);
