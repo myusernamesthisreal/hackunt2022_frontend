@@ -245,11 +245,13 @@ React.useEffect(() => {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-            
+            <View style={{flexDirection: "row"}}>
             <Section title="Testing GPS">
+            <Button title="RESET" onPress={() => { saveScore("90"); setScore(90) }}></Button>
               <Button title="Request Perms" onPress={() => getLoc()} />
               <Text>       Score: {score}</Text>
             </Section>
+            </View>
           <Section title="Latitude:">
             <Text >{coords.latitude?.toFixed(3)} deg    </Text>
           </Section>
@@ -262,7 +264,7 @@ React.useEffect(() => {
           </Section>
           <Section title="Acceleration: ">
             <Text>{accel?.toFixed(3)} mph/s</Text>
-            <Button title="RESET" onPress={() => {saveScore("90"); setScore(90)}}></Button>
+            
           </Section>
         </View>
       </ScrollView>
