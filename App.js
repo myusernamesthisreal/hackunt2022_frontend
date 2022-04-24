@@ -7,10 +7,8 @@
  */
 
 import React from 'react';
-import type {Node} from 'react';
 
 import RNLocation from 'react-native-location';
-// import Geolocation from 'react-native-geolocation-service';
 
 import {
   SafeAreaView,
@@ -30,19 +28,25 @@ import {
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 
-import {
-  accelerometer,
-  gyroscope,
-  setUpdateIntervalForType,
-  SensorTypes
-} from "react-native-sensors";
-
-import { map, filter } from 'rxjs';
-
 import {Button, PermissionsAndroid} from 'react-native';
-import { useEffect } from 'react/cjs/react.production.min';
 
-const Section = ({children, title}): Node => {
+import { LineChart } from 'react-native-chart-kit';
+
+import { Dimensions } from "react-native";
+const screenWidth = Dimensions.get("window").width;
+
+const chartConfig = {
+  backgroundGradientFrom: "#1E2923",
+  backgroundGradientFromOpacity: 0,
+  backgroundGradientTo: "#08130D",
+  backgroundGradientToOpacity: 0.5,
+  color: (opacity = 1) => `rgba(26, 255, 146, ${opacity})`,
+  strokeWidth: 2, 
+  barPercentage: 0.5,
+  useShadowColorFromDataset: false 
+};
+
+const Section = ({children, title}) => {
   const isDarkMode = useColorScheme() === 'dark';
   return (
     <View style={styles.sectionContainer}>
@@ -104,28 +108,20 @@ RNLocation.configure({
   interval: 1000,
 })
 
+// states
 
-const App: () => Node = () => {
+
+const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  setUpdateIntervalForType(SensorTypes.accelerometer, 300);
-
   let speedTime = 0;
   const [coords, setCoords] = React.useState({latitude: 0, longitude: 0});
-
-  // const subscription = accelerometer.pipe(map(({x, y, z}) => (x+y+z) - 9.81), filter(speed => speed)).subscribe(speed => setSpeed(speed), error => console.log(error));
-
-  // setTimeout(() => {
-  //   subscription.unsubscribe();
-  // }, 1000);
-
-  // React.useEffect(() => {
-  //   requestLocationPerms();
-  // }, [])
+  const [historicalData, setHistoricalData] = React.useState([]);
+  const [startTime, setStartTime] = React.useState(0);
 
 const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
@@ -142,21 +138,27 @@ const getLoc = async () => {
   const loc = await RNLocation.getLatestLocation({ timeout: 1000 })
   if (loc) {
     console.log("---------------------------------------------------------") ;
+    loc.speed *= 2.2369362920544;
     console.log("Location: ", loc);
     setCoords(loc);
+    let d = ""
+    const data = {latitude: loc.latitude, longitude: loc.longitude, speed: loc.speed, timestamp: loc.timestamp}
+    if (historicalData.length < 30) {
+      d = [...historicalData, data];
+      setHistoricalData(d);
+    }
+    else {
+      d = [...historicalData.slice(1), data];
+      setHistoricalData(d);
+    }
+    setStartTime(d[0].timestamp);
+    console.log(d.map(x => x.timestamp));
+    console.log(d.length);
   }
 }
 }
 
-// const locationSubscription = RNLocation.subscribeToLocationUpdates(locations => {
-//   console.log("Location: ", locations);
-//   setCoords(locations[0]);
-// })
-
 React.useEffect(() => {
-  console.log("...............................................");
-  console.log();
-  console.log();
   if (requestLocationPerms())
   speedTime = setInterval(getLoc, 1000);
   return () => {
@@ -164,52 +166,33 @@ React.useEffect(() => {
   }
 }, [coords])
 
-  // const getLoc = () => {
-  //   if (RNLocation.getLatestLocation(
-  //     (position) => {
-  //       console.log(position);
-  //       setCoords(position.coords);
-  //       setSpeed(position.coords.speed);
-  //     },
-  //     (error) => {
-  //       console.log(error);
-  //     },
-  //     { enableHighAccuracy: true, timeout: 10, maximumAge: 100, distanceFilter: 0 },
-  //   )) {
-  //     console.log("Location is enabled");
-  //   }
-  //   else requestLocationPerms();
-  // }
-
-  // React.useEffect(() => {
-  //   if (typeof speed == "number") {
-  //       speedTime = setTimeout(getLoc(), 1000);
-  //     }
-  //   else clearTimeout(speedTime);
-  // }, [coords])
-
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
-        <Header />
+          <Section title="Welcome to DriveSafe" />
+
+        {historicalData?.length > 0 ? <View><LineChart data={
+          { labels: historicalData.map(x => (x.timestamp - startTime)/1000), datasets: [{ data: historicalData.map(x => x.speed) }] }} height={150} width={screenWidth} chartConfig={chartConfig} /></View> : null}
+
         <View
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
+            
             <Section title="Testing GPS">
               <Button title="Request Perms" onPress={() => getLoc()} />
             </Section>
           <Section title="Latitude:">
-            <Text>{coords.latitude.toFixed(3)} deg</Text>
+            <Text>{coords.latitude?.toFixed(3)} deg</Text>
           </Section>
           <Section title="Longitude: ">
-            <Text>{coords.longitude.toFixed(3)} deg</Text>
+            <Text>{coords.longitude?.toFixed(3)} deg</Text>
           </Section>
           <Section title="Speed: ">
-            <Text>{(coords.speed * 2.237).toFixed(3)} mph</Text>
+            <Text>{coords.speed?.toFixed(3)} mph</Text>
           </Section>
         </View>
       </ScrollView>

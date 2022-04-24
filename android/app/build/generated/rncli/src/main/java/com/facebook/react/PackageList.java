@@ -15,8 +15,12 @@ import java.util.ArrayList;
 import com.agontuk.RNFusedLocation.RNFusedLocationPackage;
 // react-native-location
 import com.github.reactnativecommunity.location.RNLocationPackage;
+// react-native-screens
+import com.swmansion.rnscreens.RNScreensPackage;
 // react-native-sensors
 import com.sensors.RNSensorsPackage;
+// react-native-svg
+import com.horcrux.svg.SvgPackage;
 
 public class PackageList {
   private Application application;
@@ -64,7 +68,9 @@ public class PackageList {
       new MainReactPackage(mConfig),
       new RNFusedLocationPackage(),
       new RNLocationPackage(),
-      new RNSensorsPackage()
+      new RNScreensPackage(),
+      new RNSensorsPackage(),
+      new SvgPackage()
     ));
   }
 }
