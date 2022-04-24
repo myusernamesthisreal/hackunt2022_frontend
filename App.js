@@ -172,7 +172,7 @@ React.useEffect(() => {
           <Section title="Welcome to DriveSafe" />
 
         {historicalData?.length > 0 ? <View><LineChart data={
-          { labels: historicalData.map(x => (x.timestamp - startTime)/1000), datasets: [{ data: historicalData.map(x => x.speed) }] }} height={150} width={screenWidth} chartConfig={chartConfig} /></View> : null}
+          { datasets: [{ data: historicalData.map(x => x.speed) }] }} height={150} width={screenWidth} chartConfig={chartConfig} /></View> : null}
 
         <View
           style={{
