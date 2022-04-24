@@ -189,7 +189,6 @@ React.useEffect(() => {
       speedTime = setInterval(getLoc, 500);
   return () => {
     clearInterval(speedTime);
-    clearInterval(speedLims);
   }
 }, [historicalData])
 
