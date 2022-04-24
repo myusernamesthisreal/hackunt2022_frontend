@@ -108,6 +108,9 @@ RNLocation.configure({
   interval: 1000,
 })
 
+// states
+
+
 const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -119,7 +122,6 @@ const App = () => {
   const [coords, setCoords] = React.useState({latitude: 0, longitude: 0});
   const [historicalData, setHistoricalData] = React.useState([]);
   const [startTime, setStartTime] = React.useState(0);
-  const loaded = React.useRef(false);
 
 const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
@@ -133,37 +135,36 @@ const getLoc = async () => {
         buttonNegative: "Cancel"
       }}});
       if (granted) {
-  const loc = await RNLocation.getLatestLocation({ timeout: 500 })
+  const loc = await RNLocation.getLatestLocation({ timeout: 1000 })
   if (loc) {
+    console.log("---------------------------------------------------------") ;
     loc.speed *= 2.2369362920544;
     console.log("Location: ", loc);
     setCoords(loc);
-    const d = [...historicalData];
+    let d = ""
     const data = {latitude: loc.latitude, longitude: loc.longitude, speed: loc.speed, timestamp: loc.timestamp}
-    console.log(historicalData.length)
-    if (historicalData.length >= 30) {
-      d.splice(0,1);
-      console.log(d.length);
-    }
-      d.push(data);
+    if (historicalData.length < 30) {
+      d = [...historicalData, data];
       setHistoricalData(d);
-      setStartTime(d[0].timestamp);
-      // clearTimeout(speedTime);
+    }
+    else {
+      d = [...historicalData.slice(1), data];
+      setHistoricalData(d);
+    }
+    setStartTime(d[0].timestamp);
+    console.log(d.map(x => x.timestamp));
+    console.log(d.length);
   }
 }
 }
 
 React.useEffect(() => {
-  if (requestLocationPerms() && loaded.current && !speedTime)
-  speedTime = setTimeout(() => {
-    getLoc();
-  }, 1000);
-  else
-  loaded.current = true;
+  if (requestLocationPerms())
+  speedTime = setInterval(getLoc, 1000);
   return () => {
     clearInterval(speedTime);
   }
-}, [historicalData])
+}, [coords])
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -174,7 +175,7 @@ React.useEffect(() => {
           <Section title="Welcome to DriveSafe" />
 
         {historicalData?.length > 0 ? <View><LineChart data={
-          { datasets: [{ data: historicalData.map(x => x.speed) }] }} height={150} width={screenWidth} chartConfig={chartConfig} /></View> : null}
+          { labels: historicalData.map(x => (x.timestamp - startTime)/1000), datasets: [{ data: historicalData.map(x => x.speed) }] }} height={150} width={screenWidth} chartConfig={chartConfig} /></View> : null}
 
         <View
           style={{
@@ -182,7 +183,7 @@ React.useEffect(() => {
           }}>
             
             <Section title="Testing GPS">
-              <Button title="Request Perms" onPress={getLoc} />
+              <Button title="Request Perms" onPress={() => getLoc()} />
             </Section>
           <Section title="Latitude:">
             <Text>{coords.latitude?.toFixed(3)} deg</Text>
