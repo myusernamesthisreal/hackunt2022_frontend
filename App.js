@@ -122,6 +122,7 @@ const App = () => {
   const [coords, setCoords] = React.useState({latitude: 0, longitude: 0});
   const [historicalData, setHistoricalData] = React.useState([]);
   const [startTime, setStartTime] = React.useState(0);
+  const [accel, setAccel] = React.useState(0);
 
 const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
@@ -149,6 +150,8 @@ const getLoc = async () => {
     d.push(data);
     setHistoricalData(d);
     setStartTime(d[0].timestamp);
+    const a = (d[d.length - 1].speed - d[d.length - 2].speed) / ((d[d.length - 1].timestamp - d[d.length-2].timestamp) / 1000);
+    setAccel(a);
     console.log(d.map(x => x.timestamp));
     console.log(d.length);
   }
@@ -190,6 +193,9 @@ React.useEffect(() => {
           </Section>
           <Section title="Speed: ">
             <Text>{coords.speed?.toFixed(3)} mph</Text>
+          </Section>
+          <Section title="Acceleration: ">
+            <Text>{accel?.toFixed(3)} mph/s</Text>
           </Section>
         </View>
       </ScrollView>
