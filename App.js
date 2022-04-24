@@ -141,16 +141,13 @@ const getLoc = async () => {
     loc.speed *= 2.2369362920544;
     console.log("Location: ", loc);
     setCoords(loc);
-    let d = ""
+    let d = [...historicalData];
     const data = {latitude: loc.latitude, longitude: loc.longitude, speed: loc.speed, timestamp: loc.timestamp}
-    if (historicalData.length < 30) {
-      d = [...historicalData, data];
-      setHistoricalData(d);
+    if (historicalData.length >= 30) {
+      d.splice(0,1);
     }
-    else {
-      d = [...historicalData.slice(1), data];
-      setHistoricalData(d);
-    }
+    d.push(data);
+    setHistoricalData(d);
     setStartTime(d[0].timestamp);
     console.log(d.map(x => x.timestamp));
     console.log(d.length);
@@ -164,7 +161,7 @@ React.useEffect(() => {
   return () => {
     clearInterval(speedTime);
   }
-}, [coords])
+}, [historicalData])
 
   return (
     <SafeAreaView style={backgroundStyle}>
