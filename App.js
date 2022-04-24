@@ -117,12 +117,15 @@ const App = () => {
   };
 
   let speedTime = 0;
-  const [coords, setCoords] = React.useState({latitude: 0, longitude: 0});
+  let speedLims = 0;
+  const [coords, setCoords] = React.useState({latitude: 0.1, longitude: 0.1});
   const [historicalData, setHistoricalData] = React.useState([]);
   const [startTime, setStartTime] = React.useState(0);
   const [accel, setAccel] = React.useState(0);
   const [speedLim, setSpeedLim] = React.useState(0);
   const [score, setScore] = React.useState(0);
+  const [speedCounter, setSpeedCounter] = React.useState(1);
+  const speedLoaded = React.useRef(false);
 
 const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
@@ -152,8 +155,6 @@ const getLoc = async () => {
     setStartTime(d[0].timestamp);
     const a = (d[d.length - 1].speed - d[d.length - 2].speed) / ((d[d.length - 1].timestamp - d[d.length-2].timestamp) / 1000 + 0.001);
     setAccel(a);
-    const s = await getSpeedLimit(loc.latitude, loc.longitude);
-    console.log("S is ", s);
     console.log(d.map(x => x.timestamp));
     console.log(d.length);
   }
@@ -172,6 +173,7 @@ const getSpeedLimit = async (latitude, longitude) => {
   .then(responseJson => {
     console.log("Speed limit is ", responseJson);
     setSpeedLim(responseJson.speedLimit);
+    setSpeedCounter(speedCounter + 1);
   })
   .catch(error => {
     console.error(error);
@@ -180,11 +182,21 @@ const getSpeedLimit = async (latitude, longitude) => {
 
 React.useEffect(() => {
   if (requestLocationPerms())
-  speedTime = setInterval(getLoc, 500);
+      speedTime = setInterval(getLoc, 500);
   return () => {
     clearInterval(speedTime);
   }
 }, [historicalData])
+
+React.useEffect(() => {
+  if (coords.latitude != 0 && coords.longitude != 0 && speedLoaded.current) {
+    speedLims = setInterval(getSpeedLimit(coords.latitude, coords.longitude), 5000);
+  }
+  else speedLoaded.current = true;
+  return () => {
+    clearInterval(speedLims);
+  }
+}, [speedCounter, speedLoaded.current])
 
   return (
     <SafeAreaView style={backgroundStyle}>
