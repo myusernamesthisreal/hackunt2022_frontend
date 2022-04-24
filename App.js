@@ -34,6 +34,9 @@ import AsyncStorage from '@react-native-community/async-storage';
 
 import { LineChart } from 'react-native-chart-kit';
 
+import { accelerometer, magnetometer, setUpdateIntervalForType, SensorTypes, gyroscope } from 'react-native-sensors';
+import { map, filter } from "rxjs/operators";
+
 import { Dimensions } from "react-native";
 const screenWidth = Dimensions.get("window").width;
 
@@ -47,6 +50,9 @@ const chartConfig = {
   barPercentage: 0.5,
   useShadowColorFromDataset: false 
 };
+
+setUpdateIntervalForType(SensorTypes.accelerometer, 200);
+setUpdateIntervalForType(SensorTypes.gyroscope, 200);
 
 const Section = ({children, title}) => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -108,9 +114,6 @@ RNLocation.configure({
   interval: 1000,
 })
 
-// states
-
-
 const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -126,8 +129,25 @@ const App = () => {
   const [accel, setAccel] = React.useState(0);
   const [speedLim, setSpeedLim] = React.useState(0);
   const [score, setScore] = React.useState(90);
+  const [speed, setSpeed] = React.useState(0);
+  const [gyroX, setGyroX] = React.useState(0);
+  const [gyroY, setGyroY] = React.useState(0);
+  const [gyroZ, setGyroZ] = React.useState(0);
+  const [intSpeed, setIntSpeed] = React.useState(0);
 
-const getLoc = async () => {
+  const subscription = accelerometer.pipe(map(({ x, y, z }) => (x + y + z)-9.81), filter(value => value > 0.05)).subscribe(s => {
+    s *= 2.23694;
+    setSpeed(s);
+    setIntSpeed(intSpeed + s * 0.2);
+  }, err => console.log(err));
+
+  const gyro = gyroscope.subscribe(({x, y, z}) => {
+    setGyroX(x);
+    setGyroY(y);
+    setGyroZ(z);
+  })
+
+  const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
     ios: "whenInUse",
     android: {
@@ -177,7 +197,7 @@ const getSpeedLimit = async (latitude, longitude) => {
   .then(response => response.json())
   .then(responseJson => {
     console.log("Speed limit is ", responseJson);
-    setSpeedLim(responseJson.speedLimit);
+    responseJson.speedLimit > 0 ? setSpeedLim(responseJson.speedLimit) : null;
   })
   .catch(error => {
     console.error(error);
@@ -259,12 +279,12 @@ React.useEffect(() => {
             <Text>{coords.longitude?.toFixed(3)} deg</Text>
           </Section>
           <Section title="Speed: ">
-            <Text>{coords.speed?.toFixed(3)} mph        </Text>
+            <Text>{intSpeed?.toFixed(3)} mph        </Text>
             <Text>Limit: {speedLim} mph</Text>
           </Section>
           <Section title="Acceleration: ">
-            <Text>{accel?.toFixed(3)} mph/s</Text>
-            
+            <Text>{speed?.toFixed(3)} mph/s</Text>
+            <Text>    Gyro: {gyroX?.toFixed(3)} {gyroY?.toFixed(3)} {gyroZ?.toFixed(3)}</Text>
           </Section>
         </View>
       </ScrollView>
