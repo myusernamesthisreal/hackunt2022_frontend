@@ -1,3 +1,25 @@
+
+node_modules/**/*
+.expo/*
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+package-lock.json
+# macOS
+.DS_Store
+ios/
+ios/*
+ios/main.jsbundle
+ios/**/*
+android/
+android/*
+android/**/*
+
 # OSX
 #
 .DS_Store
