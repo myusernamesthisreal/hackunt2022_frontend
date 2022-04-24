@@ -118,14 +118,12 @@ const App = () => {
 
   let speedTime = 0;
   let speedLims = 0;
-  const [coords, setCoords] = React.useState({latitude: 0.1, longitude: 0.1});
+  const [coords, setCoords] = React.useState({latitude: 0, longitude: 0});
   const [historicalData, setHistoricalData] = React.useState([]);
-  const [startTime, setStartTime] = React.useState(0);
+  const startTime = React.useRef(0);
   const [accel, setAccel] = React.useState(0);
   const [speedLim, setSpeedLim] = React.useState(0);
   const [score, setScore] = React.useState(0);
-  const [speedCounter, setSpeedCounter] = React.useState(1);
-  const speedLoaded = React.useRef(false);
 
 const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
@@ -152,17 +150,20 @@ const getLoc = async () => {
     }
     d.push(data);
     setHistoricalData(d);
-    setStartTime(d[0].timestamp);
+    // setStartTime(d[0].timestamp);
     const a = (d[d.length - 1].speed - d[d.length - 2].speed) / ((d[d.length - 1].timestamp - d[d.length-2].timestamp) / 1000 + 0.001);
     setAccel(a);
-    console.log(d.map(x => x.timestamp));
-    console.log(d.length);
+    // console.log(d.map(x => x.timestamp));
+    // console.log(d.length);
+    if (!speedLim) getSpeedLimit(loc.latitude, loc.longitude);
   }
 }
 }
 
 const getSpeedLimit = async (latitude, longitude) => {
+  
   console.log("Getting speed limit at ", latitude, longitude);
+  
   await fetch(`https://speedlimit.myusernamesthis.net/speedlimit/${latitude}/${longitude}`, {
     method: 'GET',
     headers: {
@@ -173,7 +174,6 @@ const getSpeedLimit = async (latitude, longitude) => {
   .then(responseJson => {
     console.log("Speed limit is ", responseJson);
     setSpeedLim(responseJson.speedLimit);
-    setSpeedCounter(speedCounter + 1);
   })
   .catch(error => {
     console.error(error);
@@ -185,18 +185,21 @@ React.useEffect(() => {
       speedTime = setInterval(getLoc, 500);
   return () => {
     clearInterval(speedTime);
+    clearInterval(speedLims);
   }
 }, [historicalData])
 
 React.useEffect(() => {
-  if (coords.latitude != 0 && coords.longitude != 0 && speedLoaded.current) {
+  console.log("New date ", Math.floor(Date.now() / 1000) % 8);
+  if (Math.floor((Date.now() / 1000) % 8) === 0 && startTime.current) {
+    startTime.current = false;
     speedLims = setInterval(getSpeedLimit(coords.latitude, coords.longitude), 5000);
   }
-  else speedLoaded.current = true;
+  else startTime.current = true;
   return () => {
     clearInterval(speedLims);
   }
-}, [speedCounter, speedLoaded.current])
+}, [coords])
 
   return (
     <SafeAreaView style={backgroundStyle}>
