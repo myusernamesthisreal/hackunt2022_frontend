@@ -30,6 +30,8 @@ import {
 
 import {Button, PermissionsAndroid} from 'react-native';
 
+import AsyncStorage from '@react-native-community/async-storage';
+
 import { LineChart } from 'react-native-chart-kit';
 
 import { Dimensions } from "react-native";
@@ -123,7 +125,7 @@ const App = () => {
   const startTime = React.useRef(0);
   const [accel, setAccel] = React.useState(0);
   const [speedLim, setSpeedLim] = React.useState(0);
-  const [score, setScore] = React.useState(0);
+  const [score, setScore] = React.useState(90);
 
 const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
@@ -153,6 +155,8 @@ const getLoc = async () => {
     // setStartTime(d[0].timestamp);
     const a = (d[d.length - 1].speed - d[d.length - 2].speed) / ((d[d.length - 1].timestamp - d[d.length-2].timestamp) / 1000 + 0.001);
     setAccel(a);
+    Math.abs(a) > 6.5 && loc.speed > 5 ? setScore(score - 10) : null;
+    loc.speed > speedLim ? setScore(score-5) : null;
     // console.log(d.map(x => x.timestamp));
     // console.log(d.length);
     if (!speedLim) getSpeedLimit(loc.latitude, loc.longitude);
@@ -192,6 +196,7 @@ React.useEffect(() => {
 React.useEffect(() => {
   console.log("New date ", Math.floor(Date.now() / 1000) % 8);
   if (Math.floor((Date.now() / 1000) % 8) === 0 && startTime.current) {
+    saveScore(score.toString());
     startTime.current = false;
     speedLims = setInterval(getSpeedLimit(coords.latitude, coords.longitude), 5000);
   }
@@ -200,6 +205,30 @@ React.useEffect(() => {
     clearInterval(speedLims);
   }
 }, [coords])
+
+const saveScore = async(v) => {
+  try {
+    await AsyncStorage.setItem('score', v);
+  }
+  catch (error) {
+    console.log(error);
+  }
+}
+
+const loadScore = async() => {
+  try {
+    const value = await AsyncStorage.getItem('score');
+    if (value !== null) {
+      setScore(value);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+React.useEffect(() => {
+  loadScore();
+}, [])
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -219,9 +248,10 @@ React.useEffect(() => {
             
             <Section title="Testing GPS">
               <Button title="Request Perms" onPress={() => getLoc()} />
+              <Text>       Score: {score}</Text>
             </Section>
           <Section title="Latitude:">
-            <Text>{coords.latitude?.toFixed(3)} deg</Text>
+            <Text >{coords.latitude?.toFixed(3)} deg    </Text>
           </Section>
           <Section title="Longitude: ">
             <Text>{coords.longitude?.toFixed(3)} deg</Text>
@@ -232,6 +262,7 @@ React.useEffect(() => {
           </Section>
           <Section title="Acceleration: ">
             <Text>{accel?.toFixed(3)} mph/s</Text>
+            <Button title="RESET" onPress={() => {saveScore("90"); setScore(90)}}></Button>
           </Section>
         </View>
       </ScrollView>
