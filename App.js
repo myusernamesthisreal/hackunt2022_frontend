@@ -87,9 +87,7 @@ const requestLocationPerms = async() => {
       }).then(
         granted => {
           if(granted === PermissionsAndroid.RESULTS.GRANTED){
-            console.log("You gave access to location")
-          }else{
-            console.log("Location permission denied")
+            return true;
           }
           return false;
         }
@@ -123,6 +121,8 @@ const App = () => {
   const [historicalData, setHistoricalData] = React.useState([]);
   const [startTime, setStartTime] = React.useState(0);
   const [accel, setAccel] = React.useState(0);
+  const [speedLim, setSpeedLim] = React.useState(0);
+  const [score, setScore] = React.useState(0);
 
 const getLoc = async () => {
   const granted = await RNLocation.requestPermission({
@@ -136,11 +136,11 @@ const getLoc = async () => {
         buttonNegative: "Cancel"
       }}});
       if (granted) {
-  const loc = await RNLocation.getLatestLocation({ timeout: 1000 })
+  const loc = await RNLocation.getLatestLocation({ timeout: 500 })
   if (loc) {
     console.log("---------------------------------------------------------") ;
     loc.speed *= 2.2369362920544;
-    console.log("Location: ", loc);
+    // console.log("Location: ", loc);
     setCoords(loc);
     let d = [...historicalData];
     const data = {latitude: loc.latitude, longitude: loc.longitude, speed: loc.speed, timestamp: loc.timestamp}
@@ -150,17 +150,37 @@ const getLoc = async () => {
     d.push(data);
     setHistoricalData(d);
     setStartTime(d[0].timestamp);
-    const a = (d[d.length - 1].speed - d[d.length - 2].speed) / ((d[d.length - 1].timestamp - d[d.length-2].timestamp) / 1000);
+    const a = (d[d.length - 1].speed - d[d.length - 2].speed) / ((d[d.length - 1].timestamp - d[d.length-2].timestamp) / 1000 + 0.001);
     setAccel(a);
+    const s = await getSpeedLimit(loc.latitude, loc.longitude);
+    console.log("S is ", s);
     console.log(d.map(x => x.timestamp));
     console.log(d.length);
   }
 }
 }
 
+const getSpeedLimit = async (latitude, longitude) => {
+  console.log("Getting speed limit at ", latitude, longitude);
+  await fetch(`https://speedlimit.myusernamesthis.net/speedlimit/${latitude}/${longitude}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(response => response.json())
+  .then(responseJson => {
+    console.log("Speed limit is ", responseJson);
+    setSpeedLim(responseJson.speedLimit);
+  })
+  .catch(error => {
+    console.error(error);
+  });
+}
+
 React.useEffect(() => {
   if (requestLocationPerms())
-  speedTime = setInterval(getLoc, 1000);
+  speedTime = setInterval(getLoc, 500);
   return () => {
     clearInterval(speedTime);
   }
@@ -192,7 +212,8 @@ React.useEffect(() => {
             <Text>{coords.longitude?.toFixed(3)} deg</Text>
           </Section>
           <Section title="Speed: ">
-            <Text>{coords.speed?.toFixed(3)} mph</Text>
+            <Text>{coords.speed?.toFixed(3)} mph        </Text>
+            <Text>Limit: {speedLim} mph</Text>
           </Section>
           <Section title="Acceleration: ">
             <Text>{accel?.toFixed(3)} mph/s</Text>
