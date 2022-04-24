@@ -8,6 +8,10 @@
 
 import React from 'react';
 import type {Node} from 'react';
+
+import RNLocation from 'react-native-location';
+// import Geolocation from 'react-native-geolocation-service';
+
 import {
   SafeAreaView,
   ScrollView,
@@ -32,7 +36,10 @@ import {
   setUpdateIntervalForType,
   SensorTypes
 } from "react-native-sensors";
+
 import { map, filter } from 'rxjs';
+
+import {Button, PermissionsAndroid} from 'react-native';
 
 const Section = ({children, title}): Node => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -60,6 +67,43 @@ const Section = ({children, title}): Node => {
   );
 };
 
+const requestLocationPerms = async() => {
+  try{
+    const granted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+    if(granted === PermissionsAndroid.RESULTS.GRANTED){
+      console.log("You can use the location");
+      return true;
+    }
+    else{
+      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, {
+        title: 'Location Permission',
+        message: 'We need access to your location',
+        buttonPositive: 'OK'
+      }).then(
+        granted => {
+          if(granted === PermissionsAndroid.RESULTS.GRANTED){
+            console.log("You gave access to location")
+          }else{
+            console.log("Location permission denied")
+          }
+          return false;
+        }
+      )
+    }
+  }catch(err){
+    console.warn(err)
+  }
+}
+
+
+RNLocation.configure({
+  distanceFilter: null,
+  desiredAccuracy: {android: "highAccuracy", ios: "hundredMeters"},
+  androidProvider: "playServices",
+  interval: 1000,
+})
+
+
 const App: () => Node = () => {
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -67,15 +111,71 @@ const App: () => Node = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  setUpdateIntervalForType(SensorTypes.accelerometer, 500);
+  setUpdateIntervalForType(SensorTypes.accelerometer, 300);
+
+  let speedTime = 0;
 
   const [speed, setSpeed] = React.useState(0);
+  const [coords, setCoords] = React.useState({latitude: 0, longitude: 0});
 
-  const subscription = accelerometer.pipe(map(({x, y, z}) => x+y+(z-9.8)), filter(speed => speed)).subscribe(speed => setSpeed(speed), error => console.log(error));
+  // const subscription = accelerometer.pipe(map(({x, y, z}) => (x+y+z) - 9.81), filter(speed => speed)).subscribe(speed => setSpeed(speed), error => console.log(error));
 
-  setTimeout(() => {
-    subscription.unsubscribe();
-  }, 1000);
+  // setTimeout(() => {
+  //   subscription.unsubscribe();
+  // }, 1000);
+
+  React.useEffect(() => {
+    requestLocationPerms();
+  }, [])
+
+const getLoc = async () => {
+  const loc = await RNLocation.getLatestLocation({ timeout: 1000 })
+  if (loc) {
+    console.log("Location: ", loc);
+    setCoords(loc);
+  }
+}
+
+const locationSubscription = RNLocation.subscribeToLocationUpdates(locations => {
+  console.log("Location: ", locations);
+  setCoords(locations[0]);
+})
+
+React.useEffect(() => {
+  getLoc();
+}, [])
+
+// React.useEffect(() => {
+//   if (requestLocationPerms())
+//   speedTime = setInterval(getLoc, 1000);
+//   return () => {
+//     clearInterval(speedTime);
+//   }
+// }, [coords])
+
+  // const getLoc = () => {
+  //   if (RNLocation.getLatestLocation(
+  //     (position) => {
+  //       console.log(position);
+  //       setCoords(position.coords);
+  //       setSpeed(position.coords.speed);
+  //     },
+  //     (error) => {
+  //       console.log(error);
+  //     },
+  //     { enableHighAccuracy: true, timeout: 10, maximumAge: 100, distanceFilter: 0 },
+  //   )) {
+  //     console.log("Location is enabled");
+  //   }
+  //   else requestLocationPerms();
+  // }
+
+  // React.useEffect(() => {
+  //   if (typeof speed == "number") {
+  //       speedTime = setTimeout(getLoc(), 1000);
+  //     }
+  //   else clearTimeout(speedTime);
+  // }, [coords])
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -89,8 +189,12 @@ const App: () => Node = () => {
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
             <Section title="Testing Accelerometer">
-              <Text>{speed * 2.23}</Text>
+              <Button title="Request Perms" onPress={getLoc} />
+              
             </Section>
+          <Text>{coords.latitude}</Text>
+          <Text>{coords.longitude}</Text>
+          <Text>{coords.speed}</Text>
           <Section title="Step One">
             Edit <Text style={styles.highlight}>App.js</Text> to change this
             screen and then come back to see your edits.
