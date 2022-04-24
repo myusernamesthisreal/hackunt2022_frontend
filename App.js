@@ -40,6 +40,7 @@ import {
 import { map, filter } from 'rxjs';
 
 import {Button, PermissionsAndroid} from 'react-native';
+import { useEffect } from 'react/cjs/react.production.min';
 
 const Section = ({children, title}): Node => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -97,7 +98,7 @@ const requestLocationPerms = async() => {
 
 
 RNLocation.configure({
-  distanceFilter: null,
+  distanceFilter: 0.01,
   desiredAccuracy: {android: "highAccuracy", ios: "hundredMeters"},
   androidProvider: "playServices",
   interval: 1000,
@@ -114,8 +115,6 @@ const App: () => Node = () => {
   setUpdateIntervalForType(SensorTypes.accelerometer, 300);
 
   let speedTime = 0;
-
-  const [speed, setSpeed] = React.useState(0);
   const [coords, setCoords] = React.useState({latitude: 0, longitude: 0});
 
   // const subscription = accelerometer.pipe(map(({x, y, z}) => (x+y+z) - 9.81), filter(speed => speed)).subscribe(speed => setSpeed(speed), error => console.log(error));
@@ -124,34 +123,46 @@ const App: () => Node = () => {
   //   subscription.unsubscribe();
   // }, 1000);
 
-  React.useEffect(() => {
-    requestLocationPerms();
-  }, [])
+  // React.useEffect(() => {
+  //   requestLocationPerms();
+  // }, [])
 
 const getLoc = async () => {
+  const granted = await RNLocation.requestPermission({
+    ios: "whenInUse",
+    android: {
+      detail: "fine",
+      rationale: {
+        title: "Location permission",
+        message: "We need access to your location",
+        buttonPositive: "OK",
+        buttonNegative: "Cancel"
+      }}});
+      if (granted) {
   const loc = await RNLocation.getLatestLocation({ timeout: 1000 })
   if (loc) {
+    console.log("---------------------------------------------------------") ;
     console.log("Location: ", loc);
     setCoords(loc);
   }
 }
+}
 
-const locationSubscription = RNLocation.subscribeToLocationUpdates(locations => {
-  console.log("Location: ", locations);
-  setCoords(locations[0]);
-})
+// const locationSubscription = RNLocation.subscribeToLocationUpdates(locations => {
+//   console.log("Location: ", locations);
+//   setCoords(locations[0]);
+// })
 
 React.useEffect(() => {
-  getLoc();
-}, [])
-
-// React.useEffect(() => {
-//   if (requestLocationPerms())
-//   speedTime = setInterval(getLoc, 1000);
-//   return () => {
-//     clearInterval(speedTime);
-//   }
-// }, [coords])
+  console.log("...............................................");
+  console.log();
+  console.log();
+  if (requestLocationPerms())
+  speedTime = setInterval(getLoc, 1000);
+  return () => {
+    clearInterval(speedTime);
+  }
+}, [coords])
 
   // const getLoc = () => {
   //   if (RNLocation.getLatestLocation(
@@ -188,27 +199,18 @@ React.useEffect(() => {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-            <Section title="Testing Accelerometer">
-              <Button title="Request Perms" onPress={getLoc} />
-              
+            <Section title="Testing GPS">
+              <Button title="Request Perms" onPress={() => getLoc()} />
             </Section>
-          <Text>{coords.latitude}</Text>
-          <Text>{coords.longitude}</Text>
-          <Text>{coords.speed}</Text>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.js</Text> to change this
-            screen and then come back to see your edits.
+          <Section title="Latitude:">
+            <Text>{coords.latitude.toFixed(3)} deg</Text>
           </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
+          <Section title="Longitude: ">
+            <Text>{coords.longitude.toFixed(3)} deg</Text>
           </Section>
-          <Section title="Debug">
-            <DebugInstructions />
+          <Section title="Speed: ">
+            <Text>{(coords.speed * 2.237).toFixed(3)} mph</Text>
           </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -225,13 +227,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sectionDescription: {
-    marginTop: 8,
+    marginBottom: 8,
     fontSize: 18,
     fontWeight: '400',
   },
   highlight: {
     fontWeight: '700',
   },
+  Text: {
+    fontSize: 12,
+    padding: 8,
+    marginBottom: 16,
+  }
 });
 
 
